@@ -13,20 +13,20 @@ namespace NVX_System
         {
             public ushort xioValue;
             public string name;
-            public string streamURI;
+            public string streamURL;
             public uint ipid;
         };
 
         public static List<Route> routes = new List<Route> 
         {
-            new Route() {xioValue = 1, name = "Brightsign", streamURI = "", ipid = 11 },
-            new Route() {xioValue = 2, name = "Solstice", streamURI = "", ipid = 12 },
-            new Route() {xioValue = 3, name = "Unused", streamURI = "", ipid = 13 },
-            new Route() {xioValue = 4, name = "Unused", streamURI = "", ipid = 14 },
-            new Route() {xioValue = 5, name = "Unused", streamURI = "", ipid = 15 },
-            new Route() {xioValue = 6, name = "Unused", streamURI = "", ipid = 16 },
-            new Route() {xioValue = 7, name = "Lobby Sign", streamURI = "", ipid = 17 },
-            new Route() {xioValue = 8, name = "Aux Sign", streamURI = "", ipid = 18 },
+            new Route() {xioValue = 1, name = "Brightsign", streamURL = "", ipid = 11 },
+            new Route() {xioValue = 2, name = "Solstice", streamURL = "", ipid = 12 },
+            new Route() {xioValue = 3, name = "Unused", streamURL = "", ipid = 13 },
+            new Route() {xioValue = 4, name = "Unused", streamURL = "", ipid = 14 },
+            new Route() {xioValue = 5, name = "Unused", streamURL = "", ipid = 15 },
+            new Route() {xioValue = 6, name = "Unused", streamURL = "", ipid = 16 },
+            new Route() {xioValue = 7, name = "Lobby Sign", streamURL = "", ipid = 17 },
+            new Route() {xioValue = 8, name = "Aux Sign", streamURL = "", ipid = 18 },
         };
 
         public static void ListRoutes()
@@ -35,7 +35,7 @@ namespace NVX_System
             CrestronConsole.PrintLine($"VideoRoutes Dump");
             foreach (var item in VideoRoutes.routes)
             {
-                CrestronConsole.PrintLine($"{item.xioValue} | {item.name} | {item.streamURI}");
+                CrestronConsole.PrintLine($"{item.xioValue} | {item.name} | {item.streamURL}");
             }
         }
         

@@ -16,6 +16,8 @@ namespace NVX_System
         
         private  Tsw1070 _tsw1070;
         private  DmNvx350 _nvxRx;
+
+        //List of nvx encoders
         private List<DmNvxE30> _nvxTxList = new List<DmNvxE30>();
              
   
@@ -29,6 +31,7 @@ namespace NVX_System
                 _nvxRx = new DmNvx350(0x0A, this) { Description = "NVX Rx" };
 
 
+                //loop to add encoders to the encoder list
                 int j = 0;
                 for (uint i = 0x0B; i <= 0x12; i++)
                 {
@@ -58,13 +61,11 @@ namespace NVX_System
                 
 
                 //transmitters
+                //loop through encoder list elements and register each
                 foreach (var tx in _nvxTxList)
                 {
                     tx.Register();
                 }
-
-
-
             }
             catch (Exception e)
             {
@@ -78,6 +79,7 @@ namespace NVX_System
         {
             try
             {
+                //register events and their handlers and set AutoInitiation and Stream start
                 nvx.OnlineStatusChange += NvxOnlineStatusChangeEvent;
                 nvx.IpInformationChange += NvxIpInformationChangeEvent;
                 nvx.Control.EnableAutomaticInitiation();
@@ -94,16 +96,23 @@ namespace NVX_System
         //Event to update local Stream URL when the unit goes online and reports stream change
         private void NvxTxStreamChangeEvent(Crestron.SimplSharpPro.DeviceSupport.Stream stream, StreamEventArgs args)
         {
+            //identification for debug
             CrestronConsole.PrintLine($"NvxTxStreamChangeEvent");
 
+            //get nvx object which owns the stream and cast it to your variant
             var nvx = (DmNvxE30)stream.Owner;
+
+            //get the ipid (decimal)
             var id = nvx.ID;
+
+            //find index of that id in the VideoRoutes list containing the names, Xiovalues, streamUR
             var index = VideoRoutes.routes.FindIndex(i => i.ipid == id);
 
-            CrestronConsole.PrintLine($"nvx: {nvx} ipid: {id} index: {index}");
-
+            //print to console for debugging
             CrestronConsole.PrintLine($"StreamChange Event - index: {index} : {_nvxTxList[index].Control.ServerUrlFeedback.StringValue ?? "null"}");
-            VideoRoutes.routes[index].streamURI = _nvxTxList[index].Control.ServerUrlFeedback.StringValue ?? "null";
+
+            //Set the Stream URL for each transmitter in the VideoRoutes.routes list
+            VideoRoutes.routes[index].streamURL = _nvxTxList[index].Control.ServerUrlFeedback.StringValue ?? "null";
             
         }
 
@@ -184,8 +193,8 @@ namespace NVX_System
                         var index = Array.IndexOf(Joins.StreamSelectionJoins, item);
 
                        //***routing via StreamLocation URL settings***
-                        CrestronConsole.PrintLine($"Switching {_nvxRx.Description} to {VideoRoutes.routes[index].name} @ {VideoRoutes.routes[index].streamURI}");
-                        _nvxRx.Control.ServerUrl.StringValue = VideoRoutes.routes[index].streamURI;
+                        CrestronConsole.PrintLine($"Switching {_nvxRx.Description} to {VideoRoutes.routes[index].name} @ {VideoRoutes.routes[index].streamURL}");
+                        _nvxRx.Control.ServerUrl.StringValue = VideoRoutes.routes[index].streamURL;
 
                         //OR
                         //
