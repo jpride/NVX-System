@@ -4,16 +4,17 @@ using Crestron.SimplSharpPro;                       	// For Basic SIMPL#Pro clas
 using System.Threading;
 using Crestron.SimplSharpPro.DeviceSupport;
 using Crestron.SimplSharpPro.UI;
-using System.IO;
+//using System.IO;
 using System.Collections.Generic;
 using Crestron.SimplSharpPro.DM.Streaming;
+using Crestron.SimplSharp.CrestronIO;
 using Crestron.SimplSharpPro.DM;
 
 namespace NVX_System
 {
     public class ControlSystem : CrestronControlSystem
     {
-        
+        private bool _debug = true;
         private  Tsw1070 _tsw1070;
         private  DmNvx350 _nvxRx;
 
@@ -40,10 +41,31 @@ namespace NVX_System
                 }
 
 
-                //Subscribe to the controller events (System, Program, and Ethernet)
-                CrestronEnvironment.SystemEventHandler += ControllerSystemEventHandler;
-                CrestronEnvironment.ProgramStatusEventHandler += ControllerProgramEventHandler;
-                CrestronEnvironment.EthernetEventHandler += ControllerEthernetEventHandler;
+                try
+                {
+                    string SDGFilePath = Path.Combine(Directory.GetApplicationDirectory(), "tsw1070.sgd");
+
+                    if (File.Exists(SDGFilePath))
+                    {
+                        _tsw1070.LoadSmartObjects(SDGFilePath);
+
+                        foreach (KeyValuePair<uint, SmartObject> pair in _tsw1070.SmartObjects)
+                        {
+                            pair.Value.SigChange += SmartObjectSigChange;
+                        }
+
+                        ErrorLog.Notice($"SGD File loaded!");
+                    }
+                    else
+                    {
+                        ErrorLog.Error("SmartGraphics Definition file not found! Set .sgd file to 'Copy Always'!");
+                    }
+                }
+                catch (Exception e)
+                {
+                    ErrorLog.Error("Error loading smartgraphics definition");
+                }
+
 
                 
                 //Assign event handlers
@@ -53,7 +75,7 @@ namespace NVX_System
                 _tsw1070.OnlineStatusChange += Tsw1070OnlineStatusChange;
                 _tsw1070.IpInformationChange += Tsw1070IpInformationChange;
                 _tsw1070.SigChange += Tsw1070SigChange; //this eventhandler is the most important
-                _tsw1070.ButtonStateChange += Tsw1070ButtonStateChange;
+                
 
                 //NVX
                 //receivers
@@ -74,60 +96,73 @@ namespace NVX_System
             }
         }
 
-
-        public void ConfigureNVX(DmNvxBaseClass nvx)
+        private void SmartObjectSigChange(GenericBase currentDevice, SmartObjectEventArgs args)
         {
-            try
+            if (_debug) CrestronConsole.PrintLine($"Smartobject used ID:{args.SmartObjectArgs.ID}");
+
+            if (args.Sig.Name.Contains("Pressed")) //check that the sig is a digitl button press. some smartgraphics lists also send a ushort(analog) index 'clicked' of the pressed button
             {
-                //register events and their handlers and set AutoInitiation and Stream start
-                nvx.OnlineStatusChange += NvxOnlineStatusChangeEvent;
-                nvx.IpInformationChange += NvxIpInformationChangeEvent;
-                nvx.Control.EnableAutomaticInitiation();
-                nvx.Control.Start();
-                nvx.SourceTransmit.StreamChange += NvxTxStreamChangeEvent;
+                switch ((PanelSSmartObjectIDs)args.SmartObjectArgs.ID)
+                {
+                    case PanelSSmartObjectIDs.StreamSelectionList:
+                        {
+                            if (_debug) CrestronConsole.PrintLine($"Stream Selection List button pressed; signal = {args.Sig.GetType()}, number = {args.Sig.Number}, name = {args.Sig.Name}");
 
+                            //if we find the sig number (join) in the Joins.StreamSelectionBtns joins list AND the value is true (rising edge)
+                            if (Array.Exists(Joins.StreamSelectionSmartObjJoins, x => x == args.Sig.Number))
+                            {
+
+                                //loops through the join numbers in the array
+                                foreach (var item in Joins.StreamSelectionSmartObjJoins)
+                                {
+                                    //equate the join number to the index it has in the list
+                                    var index = Array.IndexOf(Joins.StreamSelectionSmartObjJoins, item);
+
+                                    if (args.Sig.Number == item && args.Sig.BoolValue)
+                                    {
+
+                                        //***routing via StreamLocation URL settings***
+                                        if (_debug) CrestronConsole.PrintLine($"Switching {_nvxRx.Description} to {VideoRoutes.routes[index].name} @ {VideoRoutes.routes[index].streamURL}");
+                                        _nvxRx.Control.ServerUrl.StringValue = VideoRoutes.routes[index].streamURL;
+
+                                        //Set the digital output high when this is selected
+                                        _tsw1070.SmartObjects[(uint)PanelSSmartObjectIDs.StreamSelectionList].BooleanInput[(uint)index + 1].BoolValue = true;
+                                    }
+                                    else
+                                    {
+                                        _tsw1070.SmartObjects[(uint)PanelSSmartObjectIDs.StreamSelectionList].BooleanInput[(uint)index + 1].BoolValue = false;
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    case PanelSSmartObjectIDs.NavList:
+                        {
+                            if (_debug) CrestronConsole.PrintLine($"Nav List button pressed; signal = {args.Sig.GetType()}, number = {args.Sig.Number}, name = {args.Sig.Name}");
+
+                            if (Array.Exists(Joins.tswNavSmartObjectJoins, x => x == args.Sig.Number) && args.Sig.BoolValue == true)
+                            {
+                                foreach (var item in Joins.tswNavSmartObjectJoins)
+                                {
+                                    if (args.Sig.Number == item)
+                                    {
+                                        if (_debug) CrestronConsole.PrintLine($"Setting join {item + Joins.tswNavSmartObjFbOffset} high");
+                                        _tsw1070.BooleanInput[item + Joins.tswNavSmartObjFbOffset].BoolValue = true;
+                                    }
+                                    else 
+                                    {
+                                        if (_debug) CrestronConsole.PrintLine($"Setting join {item + Joins.tswNavSmartObjFbOffset} low");
+                                        _tsw1070.BooleanInput[item + Joins.tswNavSmartObjFbOffset].BoolValue = false;
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                }
             }
-            catch (Exception e)
-            {
-                CrestronConsole.PrintLine($"ConfigureNVX() Error for {nvx.Description}: {e.Message}");
-            }
         }
 
-        //Event to update local Stream URL when the unit goes online and reports stream change
-        private void NvxTxStreamChangeEvent(Crestron.SimplSharpPro.DeviceSupport.Stream stream, StreamEventArgs args)
-        {
-            //identification for debug
-            CrestronConsole.PrintLine($"NvxTxStreamChangeEvent");
-
-            //get nvx object which owns the stream and cast it to your variant
-            var nvx = (DmNvxE30)stream.Owner;
-
-            //get the ipid (decimal)
-            var id = nvx.ID;
-
-            //find index of that id in the VideoRoutes list containing the names, Xiovalues, streamUR
-            var index = VideoRoutes.routes.FindIndex(i => i.ipid == id);
-
-            //print to console for debugging
-            CrestronConsole.PrintLine($"StreamChange Event - index: {index} : {_nvxTxList[index].Control.ServerUrlFeedback.StringValue ?? "null"}");
-
-            //Set the Stream URL for each transmitter in the VideoRoutes.routes list
-            VideoRoutes.routes[index].streamURL = _nvxTxList[index].Control.ServerUrlFeedback.StringValue ?? "null";
-            
-        }
-
-
-        private void NvxIpInformationChangeEvent(GenericBase currentDevice, ConnectedIpEventArgs args)
-        {
-            CrestronConsole.PrintLine($"{currentDevice.Description} ip address: {args.DeviceIpAddress}");
-        }
-
-        private void NvxOnlineStatusChangeEvent(GenericBase currentDevice, OnlineOfflineEventArgs args)
-        {     
-            CrestronConsole.PrintLine($"{currentDevice.Name} '{currentDevice.Description}' @ {currentDevice.ID} is {(args.DeviceOnLine ? "online" : "offline")}");
-        }
-
-
+        //initialize system
         public override void InitializeSystem()
         {
             try
@@ -156,9 +191,63 @@ namespace NVX_System
         }
 
 
+        public void ConfigureNVX(DmNvxBaseClass nvx)
+        {
+            try
+            {
+                //register events and their handlers and set AutoInitiation and Stream start
+                nvx.OnlineStatusChange += NvxOnlineStatusChangeEvent;
+                nvx.IpInformationChange += NvxIpInformationChangeEvent;
+                nvx.Control.EnableAutomaticInitiation();
+                nvx.Control.Start();
+                nvx.SourceTransmit.StreamChange += NvxTxStreamChangeEvent;
+
+            }
+            catch (Exception e)
+            {
+                CrestronConsole.PrintLine($"ConfigureNVX() Error for {nvx.Description}: {e.Message}");
+            }
+        }
+
+        //Event to update local Stream URL when the unit goes online and reports stream change
+        private void NvxTxStreamChangeEvent(Crestron.SimplSharpPro.DeviceSupport.Stream stream, StreamEventArgs args)
+        {
+            //identification for debug
+            if (_debug) CrestronConsole.PrintLine($"NvxTxStreamChangeEvent");
+
+            //get nvx object which owns the stream and cast it to your variant
+            var nvx = (DmNvxE30)stream.Owner;
+
+            //get the ipid (decimal)
+            var id = nvx.ID;
+
+            //find index of that id in the VideoRoutes list containing the names, Xiovalues, streamUR
+            var index = VideoRoutes.routes.FindIndex(i => i.ipid == id);
+
+            //print to console for debugging
+            if (_debug) CrestronConsole.PrintLine($"StreamChange Event - index: {index} : {_nvxTxList[index].Control.ServerUrlFeedback.StringValue ?? "null"}");
+
+            //Set the Stream URL for each transmitter in the VideoRoutes.routes list
+            VideoRoutes.routes[index].streamURL = _nvxTxList[index].Control.ServerUrlFeedback.StringValue ?? "null";
+
+            
+            foreach (var item in VideoRoutes.routes)
+            {
+                _tsw1070.StringInput[item.xioValue].StringValue = string.Format($"{item.streamURL}");
+            }
+
+        }
 
 
+        private void NvxIpInformationChangeEvent(GenericBase currentDevice, ConnectedIpEventArgs args)
+        {
+            CrestronConsole.PrintLine($"{currentDevice.Description} ip address: {args.DeviceIpAddress}");
+        }
 
+        private void NvxOnlineStatusChangeEvent(GenericBase currentDevice, OnlineOfflineEventArgs args)
+        {     
+            if (_debug) CrestronConsole.PrintLine($"{currentDevice.Name} '{currentDevice.Description}' @ {currentDevice.ID} is {(args.DeviceOnLine ? "online" : "offline")}");
+        }
 
         public void Tsw1070SigChange(BasicTriList currentDevice, SigEventArgs args)
         {
@@ -183,16 +272,16 @@ namespace NVX_System
             }
             
             //if we find the sig number (join) in the Joins.StreamSelectionBtns joins list AND the value is true (rising edge)
-            if (Array.Exists(Joins.StreamSelectionBtns, x => x == args.Sig.Number) && args.Sig.BoolValue)
+            if (Array.Exists(Joins.StreamSelectionSmartObjJoins, x => x == args.Sig.Number) && args.Sig.BoolValue)
             {
            
                 //loops through the join numbers in the array
-                foreach (var item in Joins.StreamSelectionBtns)
+                foreach (var item in Joins.StreamSelectionSmartObjJoins)
                 {
                     if (args.Sig.Number == item)
                     {
                         //equate the join number to the index it has in the list
-                        var index = Array.IndexOf(Joins.StreamSelectionBtns, item);
+                        var index = Array.IndexOf(Joins.StreamSelectionSmartObjJoins, item);
 
                        //***routing via StreamLocation URL settings***
                         CrestronConsole.PrintLine($"Switching {_nvxRx.Description} to {VideoRoutes.routes[index].name} @ {VideoRoutes.routes[index].streamURL}");
@@ -223,11 +312,6 @@ namespace NVX_System
             }
         }
 
-        public void Tsw1070ButtonStateChange(GenericBase device, ButtonEventArgs args)
-        {
-            throw new NotImplementedException();
-        }
-
         public void Tsw1070IpInformationChange(GenericBase currentDevice, ConnectedIpEventArgs args)
         {
             CrestronConsole.PrintLine($"Panel IP: {args.DeviceIpAddress}");
@@ -244,11 +328,6 @@ namespace NVX_System
             //throw new NotImplementedException();
         }
 
-        public void Tsw1070ExtenderHardButtonReservedSigChange(DeviceExtender currentDeviceExtender, SigEventArgs args)
-        {
-            throw new NotImplementedException();
-        }
-
         public void ConfigureDevice(BasicTriList device)
         {
             var analogSliderSigs = new List<UShortInputSig>();
@@ -260,13 +339,16 @@ namespace NVX_System
             CreateSigGroup(Joins.AnalogSliderGroupId, analogSliderSigs.ToArray());
 
 
-            foreach (var item in Joins.StreamSelectionBtns)
+            foreach (var item in Joins.StreamSelectionSmartObjJoins)
             {
                 //interate thru StreamSelectionBtns array and get index of each item
-                var index = Array.IndexOf(Joins.StreamSelectionBtns, item);
+                var index = Array.IndexOf(Joins.StreamSelectionSmartObjJoins, item);
 
                 //use that index to populate the serial 'input' (output to panel in simpl) with the stream name from the VideoRoutes.routes list
-                _tsw1070.StringInput[Joins.StreamSelectionBtns[index]].StringValue = String.Format($"<FONT size=\"40\">{VideoRoutes.routes[index].name}</FONT>");
+                _tsw1070.StringInput[Joins.StreamSelectionSmartObjJoins[index]].StringValue = String.Format($"<FONT size=\"40\">{VideoRoutes.routes[index].name}</FONT>");
+
+                //populate the smartgraphics stringInput (outputs)....note that the StringInput index is 1 based!!!
+                _tsw1070.SmartObjects[(uint)PanelSSmartObjectIDs.StreamSelectionList].StringInput[(uint)index+1].StringValue = String.Format($"<FONT size=\"40\">{VideoRoutes.routes[index].name}</FONT>");
             }
         }
 
@@ -275,87 +357,12 @@ namespace NVX_System
             return (uint)(timeSpan.TotalMilliseconds / 10);
         }
 
-       
+        public enum PanelSSmartObjectIDs
+        { 
+            StreamSelectionList = 1,
+            NavList = 2,
+        };
 
-        /// <summary>
-        /// Event Handler for Ethernet events: Link Up and Link Down. 
-        /// Use these events to close / re-open sockets, etc. 
-        /// </summary>
-        /// <param name="ethernetEventArgs">This parameter holds the values 
-        /// such as whether it's a Link Up or Link Down event. It will also indicate 
-        /// wich Ethernet adapter this event belongs to.
-        /// </param>
-        private void ControllerEthernetEventHandler(EthernetEventArgs ethernetEventArgs)
-        {
-            switch (ethernetEventArgs.EthernetEventType)
-            {//Determine the event type Link Up or Link Down
-                case (eEthernetEventType.LinkDown):
-                    //Next need to determine which adapter the event is for. 
-                    //LAN is the adapter is the port connected to external networks.
-                    if (ethernetEventArgs.EthernetAdapter == EthernetAdapterType.EthernetLANAdapter)
-                    {
-                        //
-                    }
-                    break;
-                case (eEthernetEventType.LinkUp):
-                    if (ethernetEventArgs.EthernetAdapter == EthernetAdapterType.EthernetLANAdapter)
-                    {
-
-                    }
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// Event Handler for Programmatic events: Stop, Pause, Resume.
-        /// Use this event to clean up when a program is stopping, pausing, and resuming.
-        /// This event only applies to this SIMPL#Pro program, it doesn't receive events
-        /// for other programs stopping
-        /// </summary>
-        /// <param name="programStatusEventType"></param>
-        private void ControllerProgramEventHandler(eProgramStatusEventType programStatusEventType)
-        {
-            switch (programStatusEventType)
-            {
-                case (eProgramStatusEventType.Paused):
-                    //The program has been paused.  Pause all user threads/timers as needed.
-                    break;
-                case (eProgramStatusEventType.Resumed):
-                    //The program has been resumed. Resume all the user threads/timers as needed.
-                    break;
-                case (eProgramStatusEventType.Stopping):
-                    //The program has been stopped.
-                    //Close all threads. 
-                    //Shutdown all Client/Servers in the system.
-                    //General cleanup.
-                    //Unsubscribe to all System Monitor events
-                    break;
-            }
-
-        }
-
-        /// <summary>
-        /// Event Handler for system events, Disk Inserted/Ejected, and Reboot
-        /// Use this event to clean up when someone types in reboot, or when your SD /USB
-        /// removable media is ejected / re-inserted.
-        /// </summary>
-        /// <param name="systemEventType"></param>
-        private void ControllerSystemEventHandler(eSystemEventType systemEventType)
-        {
-            switch (systemEventType)
-            {
-                case (eSystemEventType.DiskInserted):
-                    //Removable media was detected on the system
-                    break;
-                case (eSystemEventType.DiskRemoved):
-                    //Removable media was detached from the system
-                    break;
-                case (eSystemEventType.Rebooting):
-                    //The system is rebooting. 
-                    //Very limited time to preform clean up and save any settings to disk.
-                    break;
-            }
-
-        }
+      
     }
 }

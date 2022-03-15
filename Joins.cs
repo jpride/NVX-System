@@ -10,8 +10,13 @@ namespace NVX_System
 
         public static int AnalogSliderGroupId = 1000;
 
-        public static uint[] StreamSelectionBtns = { 11, 12, 13, 14, 15, 16, 17, 18 };
+        public static uint[] StreamSelectionSmartObjJoins = { 1, 2, 3, 4, 5, 6, 7, 8 };
+
+        public static uint[] tswNavSmartObjectJoins = { 1, 2, 3 };
+        public static uint tswNavSmartObjFbOffset = 20;
     }
+
+    
 
 
 }
