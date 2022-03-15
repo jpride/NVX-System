@@ -163,15 +163,15 @@ namespace NVX_System
         public void Tsw1070SigChange(BasicTriList currentDevice, SigEventArgs args)
         {
             
-            const int AnalogSliderGroupId = 1000;
+            //const int AnalogSliderGroupId = 1000;
             //the SigHelper CheckSignalPoperties Consoles out helpful info about the incoming signals
             //SigHelper.CheckSigProperties(args.Sig);
 
-            if (args.Sig.Type == eSigType.Bool && args.Sig.Number == Joins.RampBtnJoin)
+            if (args.Sig.Type == eSigType.Bool && args.Sig.Number == Joins.RampGroupBtn)
             {
-                if (args.Sig.Number == Joins.RampBtnJoin && args.Sig.BoolValue)
+                if (args.Sig.Number == Joins.RampGroupBtn && args.Sig.BoolValue)
                 {
-                    SigGroups[AnalogSliderGroupId].CreateRamp(finalRampValue: 65535, GetTimeToRamp(TimeSpan.FromSeconds(value: 3)));
+                    SigGroups[Joins.AnalogSliderGroupId].CreateRamp(finalRampValue: 65535, GetTimeToRamp(TimeSpan.FromSeconds(value: 3)));
 
                     //utility data dump here
                     VideoRoutes.ListRoutes();
@@ -182,15 +182,17 @@ namespace NVX_System
                 
             }
             
-            if (Array.Exists(Joins.StreamSelectionJoins, x => x == args.Sig.Number) && args.Sig.BoolValue)
+            //if we find the sig number (join) in the Joins.StreamSelectionBtns joins list AND the value is true (rising edge)
+            if (Array.Exists(Joins.StreamSelectionBtns, x => x == args.Sig.Number) && args.Sig.BoolValue)
             {
            
-
-                foreach (var item in Joins.StreamSelectionJoins)
+                //loops through the join numbers in the array
+                foreach (var item in Joins.StreamSelectionBtns)
                 {
                     if (args.Sig.Number == item)
                     {
-                        var index = Array.IndexOf(Joins.StreamSelectionJoins, item);
+                        //equate the join number to the index it has in the list
+                        var index = Array.IndexOf(Joins.StreamSelectionBtns, item);
 
                        //***routing via StreamLocation URL settings***
                         CrestronConsole.PrintLine($"Switching {_nvxRx.Description} to {VideoRoutes.routes[index].name} @ {VideoRoutes.routes[index].streamURL}");
@@ -216,7 +218,7 @@ namespace NVX_System
             {
                 if (ushort.TryParse(args.Sig.StringValue, out ushort value))
                 {
-                    SigGroups[AnalogSliderGroupId].UShortValue = value;
+                    SigGroups[Joins.AnalogSliderGroupId].UShortValue = value;
                 }
             }
         }
@@ -250,7 +252,7 @@ namespace NVX_System
         public void ConfigureDevice(BasicTriList device)
         {
             var analogSliderSigs = new List<UShortInputSig>();
-            for (uint n = Joins.RampSliderJoins[0]; n <= Joins.RampSliderJoins[2]; n++)
+            for (uint n = Joins.SliderJoins[0]; n <= Joins.SliderJoins[2]; n++)
             {
                 device.UShortInput[n].TieInputToOutput(device.UShortOutput[n]);
                 analogSliderSigs.Add(device.UShortInput[n]);
@@ -258,10 +260,13 @@ namespace NVX_System
             CreateSigGroup(Joins.AnalogSliderGroupId, analogSliderSigs.ToArray());
 
 
-            foreach (var item in Joins.StreamSelectionJoins)
+            foreach (var item in Joins.StreamSelectionBtns)
             {
-                var index = Array.IndexOf(Joins.StreamSelectionJoins, item);
-                _tsw1070.StringInput[Joins.StreamSelectionJoins[index]].StringValue = String.Format($"<FONT size=\"40\">{VideoRoutes.routes[index].name}</FONT>");
+                //interate thru StreamSelectionBtns array and get index of each item
+                var index = Array.IndexOf(Joins.StreamSelectionBtns, item);
+
+                //use that index to populate the serial 'input' (output to panel in simpl) with the stream name from the VideoRoutes.routes list
+                _tsw1070.StringInput[Joins.StreamSelectionBtns[index]].StringValue = String.Format($"<FONT size=\"40\">{VideoRoutes.routes[index].name}</FONT>");
             }
         }
 
