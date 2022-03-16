@@ -10,7 +10,7 @@ VTProeVer=6.2.02
 ObjTp=Symbol
 Name=tsw1070_nav_NavList.ced
 Hint=NavList (Smart Object ID=2)
-Code=2
+Code=3
 SGControlType=Button List Horizontal
 SGControlName=NavList
 GUID=3F97BE3E-81F6-4C6A-BDAC-289A287EB953
@@ -76,14 +76,14 @@ OutputList3SigType2=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=2
-CedH=2
+Pp1=3
+CedH=3
 SmartObjId=2d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=2
+H=3
 Tp=1
 HD=TRUE
 DV=2d
@@ -96,7 +96,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=2
+H=3
 Name=tsw1070_nav_NavList.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
