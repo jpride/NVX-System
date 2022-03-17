@@ -5,6 +5,10 @@ namespace NVX_System
 {
     public static class VideoRoutes
     {
+		/// <summary>
+		/// This class will store info about the routes in our system
+		/// xioValue represents the XioRouting index of the stream
+		/// </summary>
         public class Route
         {
             public ushort xioValue;
