@@ -1,34 +1,59 @@
 using System;
-using Crestron.SimplSharp;                          	// For Basic SIMPL# Classes
-using Crestron.SimplSharpPro;                       	// For Basic SIMPL#Pro classes
+using Crestron.SimplSharp;                          	
+using Crestron.SimplSharpPro;                       	
 using System.Threading;
 using Crestron.SimplSharpPro.DeviceSupport;
 using Crestron.SimplSharpPro.UI;
 using System.Collections.Generic;
 using Crestron.SimplSharpPro.DM.Streaming;
 using Crestron.SimplSharp.CrestronIO;
-using Crestron.SimplSharpPro.DM;
+
 
 namespace NVX_System
 {
     public class ControlSystem : CrestronControlSystem
     {
-        private bool _debug = true;
-        private  Tsw1070 _tsw1070;
-        private  DmNvx350 _nvxRx;
+		private bool _nvxDebug;
+		private bool _uiDebug;
 
-        
+		public bool nvxDebug
+			{
+			get { return _nvxDebug; }
+			set { _nvxDebug = value; }
+			}
+
+		public bool uiDebug
+			{
+			get { return _uiDebug; }
+			set { _uiDebug = value; }
+			}
+
+		//devices
+		private readonly  Tsw1070 _tsw1070;
+        private readonly DmNvx350 _nvxRx;
+
         //List of nvx encoders
         private List<DmNvxE30> _nvxTxList = new List<DmNvxE30>();
-             
-  
-        public ControlSystem() : base()
+
+        //Enum for SmartObjects
+        public enum PanelSSmartObjectIDs
+        {
+            StreamSelectionList = 1,
+            NavList = 2,
+            SRList = 3
+        };
+
+
+		public ControlSystem() : base()
         {
             try
             {
                 Crestron.SimplSharpPro.CrestronThread.Thread.MaxNumberOfUserThreads = 20;
 
-                _tsw1070 = new Tsw1070(0x09, this) { Description = "Main Touchpanel" };
+				
+
+
+				_tsw1070 = new Tsw1070(0x09, this) { Description = "Main Touchpanel" };
                 _nvxRx = new DmNvx350(0x0A, this) { Description = "NVX Rx" };
 
 
@@ -67,11 +92,10 @@ namespace NVX_System
                 }
 
 
-                
+				
                 //Assign event handlers
                 //panels
                 _tsw1070.Register();
-                _tsw1070.BaseEvent += Tsw1070BaseEvent;
                 _tsw1070.OnlineStatusChange += Tsw1070OnlineStatusChange;
                 _tsw1070.IpInformationChange += Tsw1070IpInformationChange;
                 _tsw1070.SigChange += Tsw1070SigChange; //this eventhandler is the most important
@@ -96,108 +120,6 @@ namespace NVX_System
             }
         }
 
-        private void SmartObjectSigChange(GenericBase currentDevice, SmartObjectEventArgs args)
-        {
-            if (_debug) CrestronConsole.PrintLine($"Smartobject used ID:{args.SmartObjectArgs.ID}  Signal {args.Sig.GetType()}");
-
-            
-            switch ((PanelSSmartObjectIDs)args.SmartObjectArgs.ID)
-            {
-                case PanelSSmartObjectIDs.StreamSelectionList:
-                    {
-                        if (_debug) CrestronConsole.PrintLine($"Stream Selection List button pressed; signal = {args.Sig.GetType()}, number = {args.Sig.Number}, name = {args.Sig.Name}");
-
-                        //if we find the sig number (join) in the Joins.StreamSelectionBtns joins list AND the value is true (rising edge)
-                        if (Array.Exists(Joins.StreamSelectionSmartObjJoins, x => x == args.Sig.Number))
-                        {
-
-                            //loops through the join numbers in the array
-                            foreach (var item in Joins.StreamSelectionSmartObjJoins)
-                            {
-                                //equate the join number to the index it has in the list
-                                var index = Array.IndexOf(Joins.StreamSelectionSmartObjJoins, item);
-
-                                if (args.Sig.Number == item && args.Sig.BoolValue)
-                                {
-
-                                    //***routing via StreamLocation URL settings***
-                                    if (_debug) CrestronConsole.PrintLine($"Switching {_nvxRx.Description} to {VideoRoutes.routes[index].name} @ {VideoRoutes.routes[index].streamURL}");
-                                    _nvxRx.Control.ServerUrl.StringValue = VideoRoutes.routes[index].streamURL;
-
-                                    //Set the digital output high when this is selected
-                                    _tsw1070.SmartObjects[(uint)PanelSSmartObjectIDs.StreamSelectionList].BooleanInput[(uint)index + 1].BoolValue = true;
-                                }
-                                else
-                                {
-                                    _tsw1070.SmartObjects[(uint)PanelSSmartObjectIDs.StreamSelectionList].BooleanInput[(uint)index + 1].BoolValue = false;
-                                }
-                            }
-                        }
-                        break;
-                    }
-                case PanelSSmartObjectIDs.NavList:
-                    {
-                        if (_debug) CrestronConsole.PrintLine($"Nav List button pressed; signal = {args.Sig.GetType()}, number = {args.Sig.Number}, name = {args.Sig.Name}");
-
-                        if (Array.Exists(Joins.tswNavSmartObjectJoins, x => x == args.Sig.Number) && args.Sig.BoolValue)
-                        {
-                            foreach (var item in Joins.tswNavSmartObjectJoins)
-                            {
-                                if (args.Sig.Number == item)
-                                {
-                                    if (_debug) CrestronConsole.PrintLine($"Setting join {item + Joins.tswNavSmartObjFbOffset} high");
-                                    _tsw1070.BooleanInput[item + Joins.tswNavSmartObjFbOffset].BoolValue = true;
-                                }
-                                else 
-                                {
-                                    if (_debug) CrestronConsole.PrintLine($"Setting join {item + Joins.tswNavSmartObjFbOffset} low");
-                                    _tsw1070.BooleanInput[item + Joins.tswNavSmartObjFbOffset].BoolValue = false;
-                                }
-                            }
-                        }
-                        break;
-                    }
-                case PanelSSmartObjectIDs.SRList:
-                    {
-                        if (_debug) CrestronConsole.PrintLine($"SR List button pressed; signal = {args.Sig.GetType()}, number = {args.Sig.Number}, name = {args.Sig.Name}");
-
-                        var srlSigWithoutOffset = args.Sig.Number - 4010; //*** srl Sig.Numbers start at 4010 for some reason ***
-                        if (_debug) CrestronConsole.PrintLine($"srlSigWithoutOffset: {srlSigWithoutOffset}");
-
-                        //if we find the sig number (join) in the Joins.StreamSelectionBtns joins list AND the value is true (rising edge)
-                        if (Array.Exists(Joins.StreamSelectionSmartObjJoins, x => x == srlSigWithoutOffset) && args.Sig.BoolValue)
-                        {
-
-                            //loops through the join numbers in the array
-                            foreach (var item in Joins.StreamSelectionSmartObjJoins)
-                            {
-                                //equate the join number to the index it has in the list
-                                var index = Array.IndexOf(Joins.StreamSelectionSmartObjJoins, item);
-                                var fb_cue = string.Format($"fb{index + 1}");
-
-                                if (srlSigWithoutOffset == item)
-                                {
-
-                                    //***routing via StreamLocation URL settings***
-                                    if (_debug) CrestronConsole.PrintLine($"Switching {_nvxRx.Description} to {VideoRoutes.routes[index].name} @ {VideoRoutes.routes[index].streamURL}");
-                                    _nvxRx.Control.ServerUrl.StringValue = VideoRoutes.routes[index].streamURL;
-
-                                    //Set the digital output high when this is selected
-                                    _tsw1070.SmartObjects[(uint)PanelSSmartObjectIDs.SRList].BooleanInput[fb_cue].BoolValue = true;
-                                }
-                                else
-                                {
-                                    _tsw1070.SmartObjects[(uint)PanelSSmartObjectIDs.SRList].BooleanInput[fb_cue].BoolValue = false;
-                                }
-                            }
-                        }
-                        break;
-                    }
-
-                }
-            
-        }
-
         //initialize system
         public override void InitializeSystem()
         {
@@ -215,7 +137,19 @@ namespace NVX_System
                         ConfigureNVX(tx);
                         i++;
                     }
-                });
+
+					CrestronConsole.AddNewConsoleCommand (
+						SetNvxDebug,
+						"setnvxdebug",
+						"Sets nvx debug on control system",
+						ConsoleAccessLevelEnum.AccessOperator );
+
+					CrestronConsole.AddNewConsoleCommand (
+						SetUiDebug,
+						"setuidebug",
+						"Sets ui debug on control system",
+						ConsoleAccessLevelEnum.AccessOperator );
+				} );
 
                 programThread.Start();
 
@@ -225,7 +159,6 @@ namespace NVX_System
                 CrestronConsole.PrintLine($"Error in InitializeSystem: {e.Message}");
             }
         }
-
 
         public void ConfigureNVX(DmNvxBaseClass nvx)
         {
@@ -249,10 +182,10 @@ namespace NVX_System
         private void NvxTxStreamChangeEvent(Crestron.SimplSharpPro.DeviceSupport.Stream stream, StreamEventArgs args)
         {
             //identification for debug
-            //if (_debug) CrestronConsole.PrintLine($"NvxTxStreamChangeEvent");
+            if (_nvxDebug) CrestronConsole.PrintLine($"NvxTxStreamChangeEvent");
 
             //get nvx object which owns the stream and cast it to your variant
-            var nvx = (DmNvxE30)stream.Owner;
+            var nvx = stream.Owner as DmNvxE30;
 
             //get the ipid (decimal)
             var id = nvx.ID;
@@ -261,7 +194,7 @@ namespace NVX_System
             var index = VideoRoutes.routes.FindIndex(i => i.ipid == id);
 
             //print to console for debugging
-            //if (_debug) CrestronConsole.PrintLine($"StreamChange Event - index: {index} : {_nvxTxList[index].Control.ServerUrlFeedback.StringValue ?? "null"}");
+            if (_nvxDebug) CrestronConsole.PrintLine($"StreamChange Event - index: {index} : {_nvxTxList[index].Control.ServerUrlFeedback.StringValue ?? "null"}");
 
             //Set the Stream URL for each transmitter in the VideoRoutes.routes list
             VideoRoutes.routes[index].streamURL = _nvxTxList[index].Control.ServerUrlFeedback.StringValue ?? "null";
@@ -275,7 +208,7 @@ namespace NVX_System
 
                 try
                 {
-                    _tsw1070.SmartObjects[(uint)PanelSSmartObjectIDs.SRList].StringInput[item.xioValue].StringValue = string.Format($"{item.name}");
+                    //_tsw1070.SmartObjects[(uint)PanelSSmartObjectIDs.SRList].StringInput[item.xioValue].StringValue = string.Format($"{item.name}");
                     _tsw1070.SmartObjects[(uint)PanelSSmartObjectIDs.SRList].StringInput[text_cue].StringValue = string.Format($"{item.name}");
                 }
 
@@ -289,7 +222,6 @@ namespace NVX_System
 
         }
 
-
         private void NvxIpInformationChangeEvent(GenericBase currentDevice, ConnectedIpEventArgs args)
         {
             CrestronConsole.PrintLine($"{currentDevice.Description} ip address: {args.DeviceIpAddress}");
@@ -297,13 +229,17 @@ namespace NVX_System
 
         private void NvxOnlineStatusChangeEvent(GenericBase currentDevice, OnlineOfflineEventArgs args)
         {     
-            if (_debug) CrestronConsole.PrintLine($"{currentDevice.Name} '{currentDevice.Description}' @ {currentDevice.ID} is {(args.DeviceOnLine ? "online" : "offline")}");
+            if (_nvxDebug) CrestronConsole.PrintLine($"{currentDevice.Name} '{currentDevice.Description}' @ {currentDevice.ID} is {(args.DeviceOnLine ? "online" : "offline")}");
         }
 
         public void Tsw1070SigChange(BasicTriList currentDevice, SigEventArgs args)
         {
+            //**************************************************************
+            //TSW_UI is a static class for handling SigEvents from various events
+            //TSW_UI.ProcessSigChange(currentDevice, args);   
+            //**************************************************************
             
-            //const int AnalogSliderGroupId = 1000;
+			
             //the SigHelper CheckSignalPoperties Consoles out helpful info about the incoming signals
             //SigHelper.CheckSigProperties(args.Sig);
 
@@ -317,10 +253,12 @@ namespace NVX_System
                     VideoRoutes.ListRoutes();
                 }
 
-                
 
-                
+
+				
             }
+
+			
             
             //if we find the sig number (join) in the Joins.StreamSelectionBtns joins list AND the value is true (rising edge)
             if (Array.Exists(Joins.StreamSelectionSmartObjJoins, x => x == args.Sig.Number) && args.Sig.BoolValue)
@@ -363,6 +301,103 @@ namespace NVX_System
             }
         }
 
+        private void SmartObjectSigChange(GenericBase currentDevice, SmartObjectEventArgs args)
+        {
+            if (_uiDebug) CrestronConsole.PrintLine($"Smartobject used ID:{args.SmartObjectArgs.ID}  Signal {args.Sig.GetType()}");
+
+
+            switch ((PanelSSmartObjectIDs)args.SmartObjectArgs.ID)
+            {
+                case PanelSSmartObjectIDs.StreamSelectionList: //Vertical Button List (no digital feedback available) for source selection
+                    {
+                        if (_uiDebug) CrestronConsole.PrintLine($"Stream Selection List button pressed; signal = {args.Sig.GetType()}, number = {args.Sig.Number}, name = {args.Sig.Name}");
+
+                        //if we find the sig number (join) in the Joins.StreamSelectionBtns joins list AND the value is true (rising edge)
+                        if (Array.Exists(Joins.StreamSelectionSmartObjJoins, x => x == args.Sig.Number))
+                        {
+
+                            //loops through the join numbers in the array
+                            foreach (var item in Joins.StreamSelectionSmartObjJoins)
+                            {
+                                //equate the join number to the index it has in the list
+                                var index = Array.IndexOf(Joins.StreamSelectionSmartObjJoins, item);
+
+                                if (args.Sig.Number == item && args.Sig.BoolValue)
+                                {
+                                    //***routing via StreamLocation URL settings***
+                                    if (_uiDebug) CrestronConsole.PrintLine($"Switching {_nvxRx.Description} to {VideoRoutes.routes[index].name} @ {VideoRoutes.routes[index].streamURL}");
+                                    _nvxRx.Control.ServerUrl.StringValue = VideoRoutes.routes[index].streamURL;
+                                }
+                            }
+                        }
+                        break;
+                    }
+                case PanelSSmartObjectIDs.NavList: //Horizontal Button List for page nav
+                    {
+                        if (_uiDebug) CrestronConsole.PrintLine($"Nav List button pressed; signal = {args.Sig.GetType()}, number = {args.Sig.Number}, name = {args.Sig.Name}");
+
+                        if (Array.Exists(Joins.tswNavSmartObjectJoins, x => x == args.Sig.Number) && args.Sig.BoolValue)
+                        {
+                            foreach (var item in Joins.tswNavSmartObjectJoins)
+                            {
+                                
+                                if (args.Sig.Number == item)
+                                {
+                                    if (_uiDebug) CrestronConsole.PrintLine($"Setting join {item + Joins.tswNavSmartObjFbOffset} high");
+                                    _tsw1070.BooleanInput[item + Joins.tswNavSmartObjFbOffset].BoolValue = true;
+                                    //_tsw1070.SmartObjects[(uint)PanelSSmartObjectIDs.NavList].BooleanInput[item].BoolValue = true; //cannot set Fb on Button List SmartObjects
+
+                                }
+                                else
+                                {
+                                    if (_uiDebug) CrestronConsole.PrintLine($"Setting join {item + Joins.tswNavSmartObjFbOffset} low");
+                                    _tsw1070.BooleanInput[item + Joins.tswNavSmartObjFbOffset].BoolValue = false;
+                                    //_tsw1070.SmartObjects[(uint)PanelSSmartObjectIDs.NavList].BooleanInput[item].BoolValue = false; //cannot set Fb on Button List SmartObjects
+                                }
+                            }
+                        }
+                        break;
+                    }
+                case PanelSSmartObjectIDs.SRList: //Subpage Reference List for source selection
+                    {
+                        if (_uiDebug) CrestronConsole.PrintLine($"SR List button pressed; signal = {args.Sig.GetType()}, number = {args.Sig.Number}, name = {args.Sig.Name}");
+
+                        var srlSigWithoutOffset = args.Sig.Number - 4010; //*** srl Sig.Numbers start at 4010 for some reason ***
+                        if (_uiDebug) CrestronConsole.PrintLine($"srlSigWithoutOffset: {srlSigWithoutOffset}");
+
+                        //if we find the sig number (join) in the Joins.StreamSelectionBtns joins list AND the value is true (rising edge)
+                        if (Array.Exists(Joins.StreamSelectionSmartObjJoins, x => x == srlSigWithoutOffset) && args.Sig.BoolValue)
+                        {
+
+                            //loops through the join numbers in the array
+                            foreach (var item in Joins.StreamSelectionSmartObjJoins)
+                            {
+                                //equate the join number to the index it has in the list
+                                var index = Array.IndexOf(Joins.StreamSelectionSmartObjJoins, item);
+                                var fb_cue = string.Format($"fb{index + 1}");
+
+                                if (srlSigWithoutOffset == item)
+                                {
+
+                                    //***routing via StreamLocation URL settings***
+                                    if (_uiDebug) CrestronConsole.PrintLine($"Switching {_nvxRx.Description} to {VideoRoutes.routes[index].name} @ {VideoRoutes.routes[index].streamURL}");
+                                    _nvxRx.Control.ServerUrl.StringValue = VideoRoutes.routes[index].streamURL;
+
+                                    //Set the digital output high when this is selected
+                                    _tsw1070.SmartObjects[(uint)PanelSSmartObjectIDs.SRList].BooleanInput[fb_cue].BoolValue = true;
+                                }
+                                else
+                                {
+                                    _tsw1070.SmartObjects[(uint)PanelSSmartObjectIDs.SRList].BooleanInput[fb_cue].BoolValue = false;
+                                }
+                            }
+                        }
+                        break;
+                    }
+
+            }
+
+        }
 
         public void ConfigureDevice(BasicTriList device)
         {
@@ -373,8 +408,7 @@ namespace NVX_System
                 analogSliderSigs.Add(device.UShortInput[n]);
             }
             CreateSigGroup(Joins.AnalogSliderGroupId, analogSliderSigs.ToArray());
-
-
+            
             foreach (var item in Joins.StreamSelectionSmartObjJoins)
             {
                 //interate thru StreamSelectionBtns array and get index of each item
@@ -405,14 +439,6 @@ namespace NVX_System
             return (uint)(timeSpan.TotalMilliseconds / 10);
         }
 
-        public enum PanelSSmartObjectIDs
-        { 
-            StreamSelectionList = 1,
-            NavList = 2,
-            SRList = 3
-        };
-
-
         public void Tsw1070IpInformationChange(GenericBase currentDevice, ConnectedIpEventArgs args)
         {
             CrestronConsole.PrintLine($"Panel IP: {args.DeviceIpAddress}");
@@ -424,10 +450,50 @@ namespace NVX_System
             ErrorLog.Notice($"Panel {(args.DeviceOnLine ? "online" : "offline")}");
         }
 
-        public void Tsw1070BaseEvent(GenericBase device, BaseEventArgs args)
-        {
-            //throw new NotImplementedException();
-        }
+		private void SetNvxDebug ( string parms )
+		{
+			var input = parms.ToLower ();
 
-    }
+			if (input == "?")
+			{
+				CrestronConsole.ConsoleCommandResponse ( $"Set Nvx Debug\n\rParameters: 'on' or 'off'" );
+			}
+			else
+			{
+				if (input.Equals ( "on" ))
+				{
+					nvxDebug = true;
+
+				}
+				else if (input.Equals ( "off" ))
+				{
+					nvxDebug = false;
+				}
+				CrestronConsole.ConsoleCommandResponse ( $"nvxDebug set to {nvxDebug}" );
+			}
+		}
+
+		private void SetUiDebug ( string parms )
+		{
+			var input = parms.ToLower ();
+
+			if (input == "?")
+			{
+				CrestronConsole.ConsoleCommandResponse ( $"Set UI Debug\n\rParameters: 'on' or 'off'" );
+			}
+			else
+			{
+				if (input.Equals ( "on" ))
+				{
+					uiDebug = true;
+				}
+				else if (input.Equals ( "off" ))
+				{
+					uiDebug = false;
+				}
+				CrestronConsole.ConsoleCommandResponse ( $"uiDebug set to {uiDebug}" );
+			}
+		}
+
+	}
 }

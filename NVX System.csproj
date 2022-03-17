@@ -134,12 +134,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ControlSystem.cs" />
-    <Compile Include="Joins.cs" />
+    <Compile Include="HelperClasses\Joins.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SigHelper.cs" />
-    <Compile Include="Trash.cs" />
-    <Compile Include="UI.cs" />
-    <Compile Include="VideoRoutes.cs" />
+    <Compile Include="HelperClasses\SigHelper.cs" />
+    <Compile Include="HelperClasses\UI.cs" />
+    <Compile Include="HelperClasses\VideoRoutes.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig">

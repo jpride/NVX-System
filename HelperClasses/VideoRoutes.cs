@@ -1,9 +1,5 @@
 ﻿using Crestron.SimplSharp;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NVX_System
 {
@@ -29,29 +25,7 @@ namespace NVX_System
             new Route() {xioValue = 8, name = "Aux Sign", streamURL = "", ipid = 18 },
         };
 
-        public static void ListRoutes()
-        {
-            //utility data dump here
-            CrestronConsole.PrintLine($"VideoRoutes Dump");
-            foreach (var item in VideoRoutes.routes)
-            {
-                CrestronConsole.PrintLine($"{item.xioValue} | {item.name} | {item.streamURL}");
-            }
-        }
         
-      
-        public static Dictionary<int, string> _XioSubList = new Dictionary<int, string>
-        {
-            { 0, "rtsp://10.14.1.127:554/live.sdp"},
-            { 1, "rtsp://10.14.1.116:554/live.sdp"},
-            { 2, "rtsp://10.14.1.166:554/live.sdp"},
-            { 3, "rtsp://10.14.1.200:554/live.sdp"},
-            { 4, "rtsp://10.14.1.243:554/live.sdp"},
-            { 5, "rtsp://10.14.1.181:554/live.sdp"},
-            { 6, "rtsp://10.14.1.138:554/live.sdp"},
-            { 7, "rtsp://10.14.1.215:554/live.sdp"}
-        };
-
         //string List with StreamLocation values listed (ideally, this should be gleaned from the transmitters directly)
         public static List<string> StreamLocationList = new List<string> {
             "rtsp://10.14.1.127:554/live.sdp",
@@ -63,5 +37,16 @@ namespace NVX_System
             "rtsp://10.14.1.138:554/live.sdp",
             "rtsp://10.14.1.215:554/live.sdp"
         };
+
+
+        public static void ListRoutes()
+        {
+            //utility data dump here
+            CrestronConsole.PrintLine($"VideoRoutes Dump");
+            foreach (var item in VideoRoutes.routes)
+            {
+                CrestronConsole.PrintLine($"{item.xioValue} | {item.name} | {item.streamURL}");
+            }
+        }
     }
 }

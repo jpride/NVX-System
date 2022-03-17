@@ -12,9 +12,16 @@ using Crestron.SimplSharpPro.DM.Streaming;
 
 namespace NVX_System
 {
-    public static class tswUI
+    //this is a test to understand how to pass a sigevent's device and args into a class method
+    public static class TSW_UI
     {
-      
+        public static void ProcessSigChange(BasicTriList device, SigEventArgs args) 
+        {
+            CrestronConsole.PrintLine($"ProcessSigChange: Received {device} and args: {args}");
+
+            device.StringInput[1].StringValue = "test";
+
+        }
     
     }
 }

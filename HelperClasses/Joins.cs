@@ -1,6 +1,4 @@
-﻿
-
-namespace NVX_System
+﻿namespace NVX_System
 {
     public static class Joins
     {
