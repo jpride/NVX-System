@@ -1,6 +1,13 @@
 ﻿namespace NVX_System
 {
-    public static class Joins
+	public enum PanelSmartObjectIDs
+	{
+		StreamSelectionList = 1,
+		NavList = 2,
+		StreamSrl = 3
+	};
+
+	public static class Joins
     {
         public static uint RampGroupBtn = 1;
         public static uint[] SliderJoins = { 1, 2, 3 };
@@ -13,9 +20,5 @@
         public static uint[] tswNavSmartObjectJoins = { 1, 2, 3 };
         public static uint tswNavSmartObjFbOffset = 20;
     }
-
-    
-
-
 }
 
