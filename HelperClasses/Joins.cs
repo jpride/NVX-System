@@ -1,24 +1,45 @@
-﻿namespace NVX_System
+﻿namespace TSISignageApp
 {
 	public enum PanelSmartObjectIDs
 	{
-		StreamSelectionList = 1,
-		NavList = 2,
-		StreamSrl = 3
+		MainNavList = 1, //button list
+		SourceSelectionList = 21, //Source SRL
+		DestSelectList = 22, //Dest SRL
+		NvxInfoList = 4, //NVX SRL
+		SourceNameList = 5,
+		DestNameList = 6,
+		CafeAudioSrcList = 10,
+		Office1AudioSrcList = 11,
+		Office2AudioSrcList = 12,
+		CorridorAudioSrcList = 13,
+		LobbyAudioSrcList = 14, //
 	};
 
-	public static class Joins
+
+	public enum PageJoins
+	{ 
+		Routing = 10,
+		Audio = 11,
+		Naming = 12,	
+	};
+
+	public class NvxIpids
+	{
+		public uint lobbyIpid = 0x21;
+		public uint engNorthIpid = 0x22;
+		public uint engEastIpid = 0x23;
+		public uint engWestIpid = 0x24;
+		public uint serviceNorthIpid = 0x25;
+		public uint serviceWestIpid = 0x26;
+	}
+
+	public class Joins
     {
-        public static uint RampGroupBtn = 1;
-        public static uint[] SliderJoins = { 1, 2, 3 };
-        public static uint SerialInputRampJoins = 1;
+        public uint RoutingSelectAll = 20;
+		public uint RoutingClearAll = 21;
+		public uint RoutingNvxInfo = 100;
+		public uint RoutingNvxInfoExit = 101;
 
-        public static int AnalogSliderGroupId = 1000;
-
-        public static uint[] StreamSelectionSmartObjJoins = { 1, 2, 3, 4, 5, 6, 7, 8 };
-
-        public static uint[] tswNavSmartObjectJoins = { 1, 2, 3 };
-        public static uint tswNavSmartObjFbOffset = 20;
-    }
+	}
 }
 

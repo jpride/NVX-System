@@ -2,13 +2,13 @@
 using Crestron.SimplSharp;
 using System;
 
-namespace NVX_System
+namespace TSISignageApp
 {
     internal class SigHelper
     {
         public static void CheckSigProperties(Sig sig)
         {
-            CrestronConsole.PrintLine($"Sig Name: {sig.Name}");
+            CrestronConsole.PrintLine($"\n\nSig Name: {sig.Name}");
             CrestronConsole.PrintLine($"Sig Number: {sig.Number}");
             //CrestronConsole.PrintLine($"Sig Supported: {sig.Supported}");
             //CrestronConsole.PrintLine($"Sig UserObject: {sig.UserObject ?? "<NULL>"}");

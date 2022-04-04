@@ -1,7 +1,9 @@
 ﻿using Crestron.SimplSharp;
 using System.Collections.Generic;
+using Crestron.SimplSharpPro.DeviceSupport;
+using Crestron.SimplSharpPro.DM.Streaming;
 
-namespace NVX_System
+namespace TSISignageApp
 {
     public static class VideoRoutes
     {
@@ -9,24 +11,47 @@ namespace NVX_System
 		/// This class will store info about the routes in our system
 		/// xioValue represents the XioRouting index of the stream
 		/// </summary>
-        public class Route
+		/// 
+
+		public class VideoEndpointObject
+		{
+			public ushort   index;
+			public string   name;
+			public uint     ipid;
+			public string   streamUrl;
+		};
+
+        public class Route : VideoEndpointObject
         {
-            public ushort xioValue;
-            public string name;
-            public string streamURL;
-            public uint ipid;
+            public ushort	xioValue;
         };
+
+
+		public class Destination : VideoEndpointObject
+		{
+			public ushort	xioRoute;
+		};
+
+		public static List<Destination> destinations = new List<Destination>
+		{ 
+			new Destination() { index = 1, name = "Lobby",		ipid = 33},
+			new Destination() { index = 2, name = "Office 1",	ipid = 34},
+			new Destination() { index = 3, name = "Office 2",	ipid = 35},
+			new Destination() { index = 4, name = "Operations", ipid = 36},
+			new Destination() { index = 5, name = "Service 1",	ipid = 37},
+			new Destination() { index = 6, name = "Service 2",	ipid = 38},
+		};
 
         public static List<Route> routes = new List<Route> 
         {
-            new Route() {xioValue = 1, name = "Brightsign", streamURL = "", ipid = 11 },
-            new Route() {xioValue = 2, name = "Solstice", streamURL = "", ipid = 12 },
-            new Route() {xioValue = 3, name = "Unused", streamURL = "", ipid = 13 },
-            new Route() {xioValue = 4, name = "Unused", streamURL = "", ipid = 14 },
-            new Route() {xioValue = 5, name = "Unused", streamURL = "", ipid = 15 },
-            new Route() {xioValue = 6, name = "Unused", streamURL = "", ipid = 16 },
-            new Route() {xioValue = 7, name = "Lobby Sign", streamURL = "", ipid = 17 },
-            new Route() {xioValue = 8, name = "Aux Sign", streamURL = "", ipid = 18 },
+            new Route() {index = 1,		xioValue = 1,	name = "Brightsign",		streamUrl = "", ipid = 11 },
+            new Route() {index = 2,		xioValue = 2,	name = "Solstice",			streamUrl = "", ipid = 12 },
+            new Route() {index = 3,		xioValue = 3,	name = "Unused",			streamUrl = "", ipid = 13 },
+            new Route() {index = 4,		xioValue = 4,	name = "Unused",			streamUrl = "", ipid = 14 },
+            new Route() {index = 5,		xioValue = 5,	name = "Unused",			streamUrl = "", ipid = 15 },
+            new Route() {index = 6,		xioValue = 6,	name = "Unused",			streamUrl = "", ipid = 16 },
+            new Route() {index = 7,		xioValue = 7,	name = "Lobby Sign",		streamUrl = "", ipid = 17 },
+            new Route() {index = 8,		xioValue = 8,	name = "Aux Sign",			streamUrl = "", ipid = 18 },
         };
 
         
@@ -49,7 +74,7 @@ namespace NVX_System
             CrestronConsole.PrintLine($"VideoRoutes Dump");
             foreach (var item in VideoRoutes.routes)
             {
-                CrestronConsole.PrintLine($"{item.xioValue} | {item.name} | {item.streamURL}");
+                CrestronConsole.PrintLine($"{item.xioValue} | {item.name} | {item.streamUrl}");
             }
         }
     }

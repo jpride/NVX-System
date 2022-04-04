@@ -4,7 +4,7 @@ using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.DeviceSupport;
 using Crestron.SimplSharpPro.EthernetCommunication;
 
-namespace NVX_System.HelperClasses
+namespace TSISignageApp.HelperClasses
 {
 	 public class Eisc
 	{

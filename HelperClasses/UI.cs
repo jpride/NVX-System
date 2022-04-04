@@ -10,7 +10,7 @@ using Crestron.SimplSharpPro.DM.Streaming;
 
 
 
-namespace NVX_System
+namespace TSISignageApp
 {
     //this is a test to understand how to pass a sigevent's device and args into a class method
     public static class TSW_UI
