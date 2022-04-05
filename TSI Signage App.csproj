@@ -136,6 +136,7 @@
     <Compile Include="ControlSystem.cs" />
     <Compile Include="CDS\CDSInterface.cs" />
     <Compile Include="CDS\SerialDataChangeEventArgs.cs" />
+    <Compile Include="Logging\Logger.cs" />
     <Compile Include="HelperClasses\Debug.cs" />
     <Compile Include="HelperClasses\Eisc.cs" />
     <Compile Include="HelperClasses\Joins.cs" />
