@@ -1,0 +1,4 @@
+﻿SRLs
+Booleans begin at 4011
+Analogs begin at 1
+Strings begin at 11
