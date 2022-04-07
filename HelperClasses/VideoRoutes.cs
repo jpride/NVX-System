@@ -30,6 +30,7 @@ namespace TSISignageApp
 		public class Destination : VideoEndpointObject
 		{
 			public ushort	xioRoute;
+			public string   currentSrc;
 		};
 
 		public static List<Destination> destinations = new List<Destination>

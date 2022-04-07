@@ -6,9 +6,9 @@
 		SourceSelectionList = 21, //Source SRL
 		DestSelectList = 22, //Dest SRL
 		NvxInfoList = 4, //NVX SRL
-		SourceNameList = 5,
-		DestNameList = 6,
-		CafeAudioSrcList = 10,
+		SourceNameList = 5, //Source name list
+		DestNameList = 6, //dest name list
+		CafeAudioSrcList = 10, 
 		Office1AudioSrcList = 11,
 		Office2AudioSrcList = 12,
 		CorridorAudioSrcList = 13,

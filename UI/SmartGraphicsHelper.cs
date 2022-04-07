@@ -264,7 +264,7 @@ namespace TSISignageApp.UI
 
 		#region serials
 
-		public static void SetSmartObjectText ( SmartObject so, string name, string state )
+		public static void SetSmartObjectTextByCueName ( SmartObject so, string name, string state )
 		{
 			try
 			{
@@ -295,7 +295,7 @@ namespace TSISignageApp.UI
 			var name = "Item " + index.ToString() + " Text";
 			if (!so.StringInput.Contains ( name ))
 				name = "Set " + name;
-			SetSmartObjectText ( so, name, state );
+			SetSmartObjectTextByCueName ( so, name, state );
 		}
 		public static void SetSmartObjectText ( BasicTriListWithSmartObject device, uint SmartObjectID, int index, string state )
 		{
@@ -305,13 +305,13 @@ namespace TSISignageApp.UI
 		public static void SetSmartObjectInputText ( SmartObject so, int index, string state )
 		{
 			var name = "text-i" + index.ToString();
-			SetSmartObjectText ( so, name, state );
+			SetSmartObjectTextByCueName ( so, name, state );
 		}
 		// icon text matches 
 		public static void SetSmartObjectIconSerial ( SmartObject so, int index, string iconName )
 		{
 			var name = "Set Item " + index.ToString() + " Icon Serial";
-			SetSmartObjectText ( so, name, iconName );
+			SetSmartObjectTextByCueName ( so, name, iconName );
 		}
 
 		#endregion

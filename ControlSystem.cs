@@ -119,337 +119,6 @@ namespace TSISignageApp
 			}
 		}
 
-		//********************** UI Event Handlers ********************************// 
-
-		void UI_SmartObject_SigChange ( GenericBase currentDevice, SmartObjectEventArgs args )
-		{
-			var dev = (BasicTriListWithSmartObject)currentDevice;
-			SmartObject so = dev.SmartObjects[args.SmartObjectArgs.ID];
-			Sig sig = args.Sig;
-			
-			switch (args.SmartObjectArgs.ID)
-			{
-				case (uint)PanelSmartObjectIDs.MainNavList: UI_SmartObject_Nav_SigChange ( dev, args ); break;
-				case (uint)PanelSmartObjectIDs.SourceSelectionList: UI_SourceSrlChange ( dev, args ); break;
-				case (uint)PanelSmartObjectIDs.DestSelectList: UI_DestSrlChange ( dev, args ); break;
-				case (uint)PanelSmartObjectIDs.SourceNameList: UI_SourceNameListChange ( dev, args ); break;
-				case (uint)PanelSmartObjectIDs.DestNameList: UI_DestNameListChange ( dev, args ); break;
-				case (uint)PanelSmartObjectIDs.NvxInfoList: break;
-			}
-		}
-
-		private void UI_SmartObject_Nav_SigChange ( BasicTriListWithSmartObject currentDevice, SmartObjectEventArgs args )
-		{
-			SmartObject so = currentDevice.SmartObjects[args.SmartObjectArgs.ID];
-			Sig sig = args.Sig;
-
-			switch (sig.Type)
-			{
-				case eSigType.Bool:
-					if (sig.BoolValue) //press
-					{
-						CrestronConsole.PrintLine ( $"nav handler: {sig.UShortValue}" );
-						switch (sig.Number)
-						{
-							default:
-								if (Debug.uiDebug) CrestronConsole.PrintLine ( $"Nav Switch\nsig.Number: {sig.Number}" );
-								_nav = (ushort)(sig.Number - 10);
-
-								string buttonText = "Item " + sig.Number.ToString();
-								SG.SetSmartObjectDigitalJoin ( so, (int)(sig.Number), true );
-								
-								if (Debug.uiDebug) CrestronConsole.PrintLine ( $"_nav: {_nav}" );
-								UI_UpdatePage ( );
-								break;
-						}
-					}
-					else //release
-					{
-						SG.SetSmartObjectDigitalJoin ( so, (int)(sig.Number), false );
-					}
-					break;
-			}
-		}
-
-		private void UI_SourceSrlChange ( BasicTriListWithSmartObject currentDevice, SmartObjectEventArgs args )
-		{
-			if (Debug.uiDebug) SigHelper.CheckSigProperties ( args.Sig );
-
-			if (args.Sig.Type == eSigType.UShort) 
-			{
-				_sourceSelection = args.Sig.UShortValue;
-				UI_UpdateSourceListFb ( currentDevice, args );
-			}
-		}
-
-		private void UI_DestSrlChange ( BasicTriListWithSmartObject currentDevice, SmartObjectEventArgs args )
-		{
-			if (Debug.uiDebug)  CrestronConsole.PrintLine ( "Destination Selection" );
-			if (Debug.uiDebug)  SigHelper.CheckSigProperties ( args.Sig );
-
-			if (args.Sig.Type == eSigType.UShort)
-			{
-				var _destSelection = args.Sig.UShortValue;
-				if (Debug.uiDebug)  CrestronConsole.PrintLine ( $"Destination: {_destSelection}" );
-				UpdateRoute (_destSelection);
-
-				UpdateActiveRouteIndicators ( currentDevice, args );
-			}
-		}
-
-		private void UI_UpdateSourceListFb ( BasicTriListWithSmartObject currentDevice, SmartObjectEventArgs args)
-		{
-			SmartObject so = currentDevice.SmartObjects[args.SmartObjectArgs.ID];
-
-			if (Debug.uiDebug) CrestronConsole.PrintLine ( $"Updating Source List Feedback: SourceSelection: {_sourceSelection}" );
-			
-			for (ushort i = 4011; i <= 4025; i += 2) //clear all source button feedback first
-			{
-				//_xpanel.SmartObjects[ (uint)(PanelSmartObjectIDs.SourceSelectionList) ].BooleanInput[ i ].BoolValue = false;
-				UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, i, false );
-			}
-
-			switch (_sourceSelection)
-			{
-				case 1:
-					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4011, true );
-					break;
-				case 2:
-					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4013, true );
-					break;
-				case 3:
-					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4015, true );
-					break;
-				case 4:
-					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4017, true );
-					break;
-				case 5:
-					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4019, true );
-					break;
-				case 6:
-					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4021, true );
-					break;
-				case 7:
-					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4023, true );
-					break;
-				case 8:
-					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4025, true );
-					break;
-				default:
-					break;
-			}
-
-			UpdateActiveRouteIndicators ( currentDevice, args);
-		}
-
-		public void UI_SigChange ( BasicTriList currentDevice, SigEventArgs args )
-		{
-			//**************************************************************
-			//TSW_UI is a static class for handling SigEvents from various events
-			//TSW_UI.ProcessSigChange(currentDevice, args);   
-			//**************************************************************
-
-
-			SigHelper.CheckSigProperties ( args.Sig );
-
-			//the SigHelper CheckSignalPoperties Consoles out helpful info about the incoming signals
-			//SigHelper.CheckSigProperties(args.Sig);
-
-			if (args.Sig.Type == eSigType.Bool)
-			{
-				if (args.Sig.Number == joins.RoutingSelectAll && args.Sig.BoolValue)
-				{
-					if (!_sourceSelection.Equals ( 0 ))
-					{
-						UpdateRoute ( (ushort)NvxRx.lobby );
-						UpdateRoute ( (ushort)NvxRx.engNorth );
-						UpdateRoute ( (ushort)NvxRx.engEast );
-						UpdateRoute ( (ushort)NvxRx.engWest );
-						UpdateRoute ( (ushort)NvxRx.serviceNorth );
-						UpdateRoute ( (ushort)NvxRx.serviceWest );
-
-						//UpdateActiveRouteIndicators ( currentDevice, args);
-					}
-				}
-				else if (args.Sig.Number == joins.RoutingClearAll && args.Sig.BoolValue)
-				{
-					_sourceSelection = 0;
-
-					UpdateRoute ( (ushort)NvxRx.lobby );
-					UpdateRoute ( (ushort)NvxRx.engNorth );
-					UpdateRoute ( (ushort)NvxRx.engEast );
-					UpdateRoute ( (ushort)NvxRx.engWest );
-					UpdateRoute ( (ushort)NvxRx.serviceNorth );
-					UpdateRoute ( (ushort)NvxRx.serviceWest );
-
-					//UpdateActiveRouteIndicators ( currentDevice, args );
-				}
-				else if (args.Sig.Number == joins.RoutingNvxInfo && args.Sig.BoolValue)
-				{
-					UI.UserInterfaceHelper.SetDigitalJoin ( currentDevice, joins.RoutingNvxInfo, true );
-					//_xpanel.BooleanInput[ joins.RoutingNvxInfo ].BoolValue = true;
-				}
-				else if (args.Sig.Number == joins.RoutingNvxInfoExit && args.Sig.BoolValue)
-				{
-					UI.UserInterfaceHelper.SetDigitalJoin ( currentDevice, joins.RoutingNvxInfo, false );
-					//_xpanel.BooleanInput[ joins.RoutingNvxInfo ].BoolValue = false;
-				}
-			}
-		}
-
-		private void UI_SourceNameListChange ( BasicTriListWithSmartObject dev, SmartObjectEventArgs args )
-		{
-			SmartObject so = dev.SmartObjects[args.SmartObjectArgs.ID];
-
-			if (Debug.uiDebug) SigHelper.CheckSigProperties ( args.Sig );
-
-			var index = args.Sig.UShortValue - 1;
-			var stringSigNum = args.Sig.Number;
-
-			var nameData = "";
-			var routeIndex = 0;
-			var joinData = 0;
-			var queueChanges = false;
-			var cdsTag = "";
-
-			switch (args.Sig.Number)
-			{
-				case 12:
-					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
-					routeIndex = 0;
-					joinData = 11;
-					cdsTag = "Source1Name";
-					queueChanges = true;
-					break;
-				case 14:
-					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
-					routeIndex = 1;
-					joinData = 12;
-					cdsTag = "Source2Name";
-					queueChanges = true;
-					break;
-				case 16:
-					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
-					routeIndex = 2;
-					joinData = 13;
-					cdsTag = "Source3Name";
-					queueChanges = true;
-					break;
-				case 18:
-					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
-					routeIndex = 3;
-					joinData = 14;
-					cdsTag = "Source4Name";
-					queueChanges = true;
-					break;
-				case 20:
-					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
-					routeIndex = 4;
-					joinData = 15;
-					cdsTag = "Source5Name";
-					queueChanges = true;
-					break;
-				case 22:
-					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
-					routeIndex = 5;
-					joinData = 16;
-					cdsTag = "Source6Name";
-					queueChanges = true;
-					break;
-				case 24:
-					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
-					routeIndex = 6;
-					joinData = 17;
-					cdsTag = "Source7Name";
-					queueChanges = true;
-					break;
-				case 26:
-					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
-					routeIndex = 7;
-					joinData = 18;
-					cdsTag = "Source8Name";
-					queueChanges = true;
-					break;
-			}
-
-			if (queueChanges)
-			{
-				SmartObject sourceSelectList = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceSelectionList ];
-				VideoRoutes.routes[ routeIndex ].name = nameData;
-				cdsInt.SetLocalStringValue ( cdsTag, VideoRoutes.routes[ routeIndex ].name );
-				var formattedName = UI.UserInterfaceHelper.FormatTextForUi(VideoRoutes.routes[ routeIndex ].name,28,UI.UserInterfaceHelper.eCrestronFont.Arial,UI.UserInterfaceHelper.eNamedColour.White);
-				UI.SmartGraphicsHelper.SetSmartObjectTextByJoin ( sourceSelectList, (ushort)joinData, formattedName );
-			}
-		}
-
-		private void UI_DestNameListChange ( BasicTriListWithSmartObject dev, SmartObjectEventArgs args )
-		{
-			SmartObject so = dev.SmartObjects[args.SmartObjectArgs.ID];
-
-			if (Debug.uiDebug) SigHelper.CheckSigProperties ( args.Sig );
-
-			var nameData = "";
-			var routeIndex = 0;
-			var joinData = 0;
-			var queueChanges = false;
-			var cdsTag = "";
-
-
-			switch (args.Sig.Number)
-			{
-				case 12:
-					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.DestNameList ].StringOutput[ args.Sig.Number ].StringValue;
-					routeIndex = 0;
-					joinData = 11;
-					cdsTag = "Dest1Name";
-					queueChanges = true;
-					break;
-				case 14:
-					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.DestNameList ].StringOutput[ args.Sig.Number ].StringValue;
-					routeIndex = 1;
-					joinData = 13;
-					cdsTag = "Dest2Name";
-					queueChanges = true;
-					break;
-				case 16:
-					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.DestNameList ].StringOutput[ args.Sig.Number ].StringValue;
-					routeIndex = 2;
-					joinData = 15;
-					cdsTag = "Dest3Name";
-					queueChanges = true;
-					break;
-				case 18:
-					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.DestNameList ].StringOutput[ args.Sig.Number ].StringValue;
-					routeIndex = 3;
-					joinData = 17;
-					cdsTag = "Dest4Name";
-					queueChanges = true;
-					break;
-				case 20:
-					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.DestNameList ].StringOutput[ args.Sig.Number ].StringValue;
-					routeIndex = 4;
-					joinData = 19;
-					cdsTag = "Dest5Name";
-					queueChanges = true;
-					break;
-				case 22:
-					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.DestNameList ].StringOutput[ args.Sig.Number ].StringValue;
-					routeIndex = 5;
-					joinData = 21;
-					cdsTag = "Dest6Name";
-					queueChanges = true;
-					break;
-			}
-
-			if (queueChanges) //only act if a change was made
-			{
-				SmartObject destSelectList = dev.SmartObjects[(uint)PanelSmartObjectIDs.DestSelectList];
-				VideoRoutes.destinations[ routeIndex ].name = nameData;
-				cdsInt.SetLocalStringValue ( cdsTag, VideoRoutes.destinations[ routeIndex ].name );
-				var formattedName = UI.UserInterfaceHelper.FormatTextForUi(VideoRoutes.destinations[ routeIndex ].name,28,UI.UserInterfaceHelper.eCrestronFont.Arial,UI.UserInterfaceHelper.eNamedColour.White);
-				UI.SmartGraphicsHelper.SetSmartObjectTextByJoin ( destSelectList, (ushort)joinData, formattedName );
-			}
-		}
 
 
 		//*************Configure devices at Initialization**************
@@ -678,6 +347,323 @@ namespace TSISignageApp
 			UpdateNvxTxInfo ( nvx );
 		}
 
+		//********************** UI Event Handlers ********************************// 
+
+		void UI_SmartObject_SigChange ( GenericBase currentDevice, SmartObjectEventArgs args )
+		{
+			var dev = (BasicTriListWithSmartObject)currentDevice;
+			SmartObject so = dev.SmartObjects[args.SmartObjectArgs.ID];
+			Sig sig = args.Sig;
+
+			switch (args.SmartObjectArgs.ID)
+			{
+				case (uint)PanelSmartObjectIDs.MainNavList: UI_SmartObject_Nav_SigChange ( dev, args ); break;
+				case (uint)PanelSmartObjectIDs.SourceSelectionList: UI_SourceSrlChange ( dev, args ); break;
+				case (uint)PanelSmartObjectIDs.DestSelectList: UI_DestSrlChange ( dev, args ); break;
+				case (uint)PanelSmartObjectIDs.SourceNameList: UI_SourceNameListChange ( dev, args ); break;
+				case (uint)PanelSmartObjectIDs.DestNameList: UI_DestNameListChange ( dev, args ); break;
+				case (uint)PanelSmartObjectIDs.NvxInfoList: break;
+			}
+		}
+
+		private void UI_SmartObject_Nav_SigChange ( BasicTriListWithSmartObject currentDevice, SmartObjectEventArgs args )
+		{
+			SmartObject so = currentDevice.SmartObjects[args.SmartObjectArgs.ID];
+			Sig sig = args.Sig;
+
+			switch (sig.Type)
+			{
+				case eSigType.Bool:
+					if (sig.BoolValue) //press
+					{
+						CrestronConsole.PrintLine ( $"nav handler: {sig.UShortValue}" );
+						switch (sig.Number)
+						{
+							default:
+								if (Debug.uiDebug) CrestronConsole.PrintLine ( $"Nav Switch\nsig.Number: {sig.Number}" );
+								_nav = (ushort)(sig.Number - 10);
+
+								string buttonText = "Item " + sig.Number.ToString();
+								SG.SetSmartObjectDigitalJoin ( so, (int)(sig.Number), true );
+
+								if (Debug.uiDebug) CrestronConsole.PrintLine ( $"_nav: {_nav}" );
+								UI_UpdatePage ( );
+								break;
+						}
+					}
+					else //release
+					{
+						SG.SetSmartObjectDigitalJoin ( so, (int)(sig.Number), false );
+					}
+					break;
+			}
+		}
+
+		private void UI_SourceSrlChange ( BasicTriListWithSmartObject currentDevice, SmartObjectEventArgs args )
+		{
+			if (Debug.uiDebug) SigHelper.CheckSigProperties ( args.Sig );
+
+			if (args.Sig.Type == eSigType.UShort)
+			{
+				_sourceSelection = args.Sig.UShortValue;
+				UI_UpdateSourceListFb ( currentDevice, args );
+			}
+		}
+
+		private void UI_DestSrlChange ( BasicTriListWithSmartObject currentDevice, SmartObjectEventArgs args )
+		{
+			if (Debug.uiDebug) CrestronConsole.PrintLine ( "Destination Selection" );
+			if (Debug.uiDebug) SigHelper.CheckSigProperties ( args.Sig );
+
+			if (args.Sig.Type == eSigType.UShort)
+			{
+				var _destSelection = args.Sig.UShortValue;
+				if (Debug.uiDebug) CrestronConsole.PrintLine ( $"Destination: {_destSelection}" );
+				UpdateRoute ( _destSelection );
+
+				UpdateActiveRouteIndicators ( currentDevice, args );
+			}
+		}
+
+		private void UI_UpdateSourceListFb ( BasicTriListWithSmartObject currentDevice, SmartObjectEventArgs args )
+		{
+			SmartObject so = currentDevice.SmartObjects[args.SmartObjectArgs.ID];
+
+			if (Debug.uiDebug) CrestronConsole.PrintLine ( $"Updating Source List Feedback: SourceSelection: {_sourceSelection}" );
+
+			for (ushort i = 4011; i <= 4025; i += 2) //clear all source button feedback first
+			{
+				UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, i, false );
+			}
+
+			switch (_sourceSelection)
+			{
+				case 1:
+					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4011, true );
+					break;
+				case 2:
+					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4013, true );
+					break;
+				case 3:
+					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4015, true );
+					break;
+				case 4:
+					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4017, true );
+					break;
+				case 5:
+					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4019, true );
+					break;
+				case 6:
+					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4021, true );
+					break;
+				case 7:
+					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4023, true );
+					break;
+				case 8:
+					UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, 4025, true );
+					break;
+				default:
+					break;
+			}
+
+			UpdateActiveRouteIndicators ( currentDevice, args );
+		}
+
+		public void UI_SigChange ( BasicTriList currentDevice, SigEventArgs args )
+		{
+			SigHelper.CheckSigProperties ( args.Sig );
+
+			if (args.Sig.Type == eSigType.Bool && args.Sig.BoolValue)
+			{
+				if (args.Sig.Number == joins.RoutingSelectAll)
+				{
+					if (!_sourceSelection.Equals ( 0 ))
+					{
+						UpdateRoute ( (ushort)NvxRx.lobby );
+						UpdateRoute ( (ushort)NvxRx.engNorth );
+						UpdateRoute ( (ushort)NvxRx.engEast );
+						UpdateRoute ( (ushort)NvxRx.engWest );
+						UpdateRoute ( (ushort)NvxRx.serviceNorth );
+						UpdateRoute ( (ushort)NvxRx.serviceWest );
+					}
+				}
+				else if (args.Sig.Number == joins.RoutingClearAll)
+				{
+					_sourceSelection = 0;
+
+					UpdateRoute ( (ushort)NvxRx.lobby );
+					UpdateRoute ( (ushort)NvxRx.engNorth );
+					UpdateRoute ( (ushort)NvxRx.engEast );
+					UpdateRoute ( (ushort)NvxRx.engWest );
+					UpdateRoute ( (ushort)NvxRx.serviceNorth );
+					UpdateRoute ( (ushort)NvxRx.serviceWest );
+				}
+				else if (args.Sig.Number == joins.RoutingNvxInfo)
+				{
+					UI.UserInterfaceHelper.SetDigitalJoin ( currentDevice, joins.RoutingNvxInfo, true );
+				}
+				else if (args.Sig.Number == joins.RoutingNvxInfoExit)
+				{
+					UI.UserInterfaceHelper.SetDigitalJoin ( currentDevice, joins.RoutingNvxInfo, false );
+				}
+			}
+		}
+
+		private void UI_SourceNameListChange ( BasicTriListWithSmartObject dev, SmartObjectEventArgs args )
+		{
+			SmartObject so = dev.SmartObjects[args.SmartObjectArgs.ID];
+
+			if (Debug.uiDebug) SigHelper.CheckSigProperties ( args.Sig );
+
+			var index = args.Sig.UShortValue - 1;
+			var stringSigNum = args.Sig.Number;
+
+			var nameData = "";
+			var routeIndex = 0;
+			var joinData = 0;
+			var queueChanges = false;
+			var cdsTag = "";
+
+			switch (args.Sig.Number)
+			{
+				case 12:
+					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
+					routeIndex = 0;
+					joinData = 11;
+					cdsTag = "Source1Name";
+					queueChanges = true;
+					break;
+				case 14:
+					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
+					routeIndex = 1;
+					joinData = 12;
+					cdsTag = "Source2Name";
+					queueChanges = true;
+					break;
+				case 16:
+					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
+					routeIndex = 2;
+					joinData = 13;
+					cdsTag = "Source3Name";
+					queueChanges = true;
+					break;
+				case 18:
+					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
+					routeIndex = 3;
+					joinData = 14;
+					cdsTag = "Source4Name";
+					queueChanges = true;
+					break;
+				case 20:
+					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
+					routeIndex = 4;
+					joinData = 15;
+					cdsTag = "Source5Name";
+					queueChanges = true;
+					break;
+				case 22:
+					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
+					routeIndex = 5;
+					joinData = 16;
+					cdsTag = "Source6Name";
+					queueChanges = true;
+					break;
+				case 24:
+					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
+					routeIndex = 6;
+					joinData = 17;
+					cdsTag = "Source7Name";
+					queueChanges = true;
+					break;
+				case 26:
+					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceNameList ].StringOutput[ args.Sig.Number ].StringValue;
+					routeIndex = 7;
+					joinData = 18;
+					cdsTag = "Source8Name";
+					queueChanges = true;
+					break;
+			}
+
+			if (queueChanges)
+			{
+				SmartObject sourceSelectList = dev.SmartObjects[ (uint)PanelSmartObjectIDs.SourceSelectionList ];
+				VideoRoutes.routes[ routeIndex ].name = nameData;
+				cdsInt.SetLocalStringValue ( cdsTag, VideoRoutes.routes[ routeIndex ].name );
+				var formattedName = UI.UserInterfaceHelper.FormatTextForUi(VideoRoutes.routes[ routeIndex ].name,28,UI.UserInterfaceHelper.eCrestronFont.Arial,UI.UserInterfaceHelper.eNamedColour.White);
+				UI.SmartGraphicsHelper.SetSmartObjectTextByJoin ( sourceSelectList, (ushort)joinData, formattedName );
+			}
+		}
+
+		private void UI_DestNameListChange ( BasicTriListWithSmartObject dev, SmartObjectEventArgs args )
+		{
+			SmartObject so = dev.SmartObjects[args.SmartObjectArgs.ID];
+
+			if (Debug.uiDebug) SigHelper.CheckSigProperties ( args.Sig );
+
+			var nameData = "";
+			var routeIndex = 0;
+			var joinData = 0;
+			var queueChanges = false;
+			var cdsTag = "";
+
+
+			switch (args.Sig.Number)
+			{
+				case 12:
+					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.DestNameList ].StringOutput[ args.Sig.Number ].StringValue;
+					routeIndex = 0;
+					joinData = 11;
+					cdsTag = "Dest1Name";
+					queueChanges = true;
+					break;
+				case 14:
+					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.DestNameList ].StringOutput[ args.Sig.Number ].StringValue;
+					routeIndex = 1;
+					joinData = 13;
+					cdsTag = "Dest2Name";
+					queueChanges = true;
+					break;
+				case 16:
+					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.DestNameList ].StringOutput[ args.Sig.Number ].StringValue;
+					routeIndex = 2;
+					joinData = 15;
+					cdsTag = "Dest3Name";
+					queueChanges = true;
+					break;
+				case 18:
+					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.DestNameList ].StringOutput[ args.Sig.Number ].StringValue;
+					routeIndex = 3;
+					joinData = 17;
+					cdsTag = "Dest4Name";
+					queueChanges = true;
+					break;
+				case 20:
+					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.DestNameList ].StringOutput[ args.Sig.Number ].StringValue;
+					routeIndex = 4;
+					joinData = 19;
+					cdsTag = "Dest5Name";
+					queueChanges = true;
+					break;
+				case 22:
+					nameData = dev.SmartObjects[ (uint)PanelSmartObjectIDs.DestNameList ].StringOutput[ args.Sig.Number ].StringValue;
+					routeIndex = 5;
+					joinData = 21;
+					cdsTag = "Dest6Name";
+					queueChanges = true;
+					break;
+			}
+
+			if (queueChanges) //only act if a change was made
+			{
+				SmartObject destSelectList = dev.SmartObjects[(uint)PanelSmartObjectIDs.DestSelectList];
+				VideoRoutes.destinations[ routeIndex ].name = nameData;
+				cdsInt.SetLocalStringValue ( cdsTag, VideoRoutes.destinations[ routeIndex ].name );
+				var formattedName = UI.UserInterfaceHelper.FormatTextForUi(VideoRoutes.destinations[ routeIndex ].name,28,UI.UserInterfaceHelper.eCrestronFont.Arial,UI.UserInterfaceHelper.eNamedColour.White);
+				UI.SmartGraphicsHelper.SetSmartObjectTextByJoin ( destSelectList, (ushort)joinData, formattedName );
+			}
+		}
+
+
 
 		//*********Methods to deal with UI and Stream changes*************//
 
@@ -702,44 +688,56 @@ namespace TSISignageApp
 			if (Debug.uiDebug) CrestronConsole.PrintLine ( $"changed dest route: VideoRoutes.destinations[{dest - 1}].currentXioRoute = {VideoRoutes.destinations[dest - 1].xioRoute}" );
 
 
+			int destIndex = (dest > 0) ? dest - 1 : 0; //var to track index of VideoRoutes.destinations array
+			bool changesPending = (dest > 0) ? true : false; //var to track whether to make changes after switch
+			string currSrc = VideoRoutes.routes[ routeIndex ].name; //var to track currently selected source name
+			ushort textJoin = 0; //var to track which join to use for outputting text
+			ushort boolJoin = 0; //var to track which join to use for pulsing destination button
+
 			switch (dest) 
 			{
 				case 1:
 					nvxRx = _lobbyRx;
-					UI.SmartGraphicsHelper.SetSmartObjectTextByJoin ( so, 12, VideoRoutes.routes[ routeIndex ].name );
-					UI.SmartGraphicsHelper.PulseSmartObjectDigitalJoinByJoin ( so, 4011, 250 );
+					textJoin = 12;
+					boolJoin = 4011;
 					break;
 				case 2:
 					nvxRx = _engEastRx;
-					UI.SmartGraphicsHelper.SetSmartObjectTextByJoin ( so, 14, VideoRoutes.routes[ routeIndex ].name );
-					UI.SmartGraphicsHelper.PulseSmartObjectDigitalJoinByJoin ( so, 4015, 250 );
+					textJoin = 14;
+					boolJoin = 4015;
 					break;
 				case 3:
 					nvxRx = _engWestRx;
-					UI.SmartGraphicsHelper.SetSmartObjectTextByJoin ( so, 16, VideoRoutes.routes[ routeIndex ].name );
-					UI.SmartGraphicsHelper.PulseSmartObjectDigitalJoinByJoin ( so, 4019, 250 );
+					textJoin = 16;
+					boolJoin = 4019;
 					break;
 				case 4:
 					nvxRx = _engNorthRx;
-					UI.SmartGraphicsHelper.SetSmartObjectTextByJoin ( so, 18, VideoRoutes.routes[ routeIndex ].name );
-					UI.SmartGraphicsHelper.PulseSmartObjectDigitalJoinByJoin ( so, 4023, 250 );
+					textJoin = 18;
+					boolJoin = 4023;
 					break;
 				case 5:
 					nvxRx = _serviceNorthRx;
-					UI.SmartGraphicsHelper.SetSmartObjectTextByJoin ( so, 20, VideoRoutes.routes[ routeIndex ].name );
-					UI.SmartGraphicsHelper.PulseSmartObjectDigitalJoinByJoin ( so, 4027, 250 );
+					textJoin = 20;
+					boolJoin = 4027;
 					break;
 				case 6:
 					nvxRx = _serviceWestRx;
-					UI.SmartGraphicsHelper.SetSmartObjectTextByJoin ( so, 22, VideoRoutes.routes[ routeIndex ].name );
-					UI.SmartGraphicsHelper.PulseSmartObjectDigitalJoinByJoin ( so, 4031, 250 );
+					textJoin = 22;
+					boolJoin = 4031;
 					break;
 				default:
 					nvxRx = null;
 					break;
 			}
 
-			NvxRouteManager ( nvxRx, VideoRoutes.routes[routeIndex].streamUrl );
+			if (changesPending)
+			{
+				VideoRoutes.destinations[ destIndex ].currentSrc = currSrc;
+				UI.SmartGraphicsHelper.SetSmartObjectTextByJoin ( so, textJoin, currSrc );
+				UI.SmartGraphicsHelper.PulseSmartObjectDigitalJoinByJoin ( so, boolJoin, 250 );
+				NvxRouteManager ( nvxRx, VideoRoutes.routes[ routeIndex ].streamUrl );
+			}
 		}
 
 		private void NvxRouteManager ( DmNvxBaseClass rx, string streamURL )
@@ -752,17 +750,17 @@ namespace TSISignageApp
 
 		public void UpdateActiveRouteIndicators ( BasicTriListWithSmartObject currentDevice, SmartObjectEventArgs args ) //with SmartObjectEventArgs
 		{
-			//SmartObject so = currentDevice.SmartObjects[args.SmartObjectArgs.ID];
 			SmartObject so = currentDevice.SmartObjects[(uint)PanelSmartObjectIDs.DestSelectList];
 
 
 			int j = 4012;
+			int inc = 4; //4 digitals per subpage
 			foreach (var item in VideoRoutes.destinations)
 			{
 				if (Debug.uiDebug) CrestronConsole.PrintLine ( $"UpdateSourceLoop; Bool being evalutated = {j}, item index = {item.index}, cXio = {item.xioRoute}, " );
 				CrestronConsole.PrintLine ( $"item.XioRoute-{item.xioRoute}, _sourceSelection-{_sourceSelection}, item.streamUrl-{item.streamUrl}, route.StreamUrl-{VideoRoutes.routes[_sourceSelection -1].streamUrl}" );
 				UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, j, ((item.xioRoute == _sourceSelection) || (item.streamUrl == VideoRoutes.routes[ _sourceSelection -1 ].streamUrl)) );
-				j += 4; //this SRL has 4 digitals per page ref
+				j += inc;
 			}
 		}
 
@@ -771,11 +769,12 @@ namespace TSISignageApp
 			SmartObject so = currentDevice.SmartObjects[(uint)PanelSmartObjectIDs.DestSelectList];
 
 			int j = 4012;
+			int inc = 4;
 			foreach (var item in VideoRoutes.destinations)
 			{
 				if (Debug.uiDebug) CrestronConsole.PrintLine ( $"UpdateSourceLoop; Bool being evalutated = {j}, item index = {item.index}, cXio = {item.xioRoute}, " );
 				UI.SmartGraphicsHelper.SetSmartObjectDigitalJoinByJoin ( so, j, ((item.xioRoute == _sourceSelection) || (item.streamUrl == VideoRoutes.routes[ _sourceSelection -1 ].streamUrl)));
-				j += 4; //this SRL has 4 digitals per page ref
+				j += inc; 
 			}
 		}
 

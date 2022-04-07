@@ -142,7 +142,6 @@
     <Compile Include="HelperClasses\Joins.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="HelperClasses\SigHelper.cs" />
-    <Compile Include="HelperClasses\UI.cs" />
     <Compile Include="HelperClasses\VideoRoutes.cs" />
     <Compile Include="UI\SmartGraphicsHelper.cs" />
     <Compile Include="UI\UserInterfaceHelper.cs" />
