@@ -149,39 +149,6 @@ namespace TSISignageApp
 			LoadUserInterfacesSmartGraphics ( dev );
 		}
 
-		void ConfigureNvxDevices ( )
-		{
-
-			_lobbyRx = new DmNvxD30 ( nvxIpids.lobbyIpid, this ) { Description = "Lobby Decoder" };
-			_engNorthRx = new DmNvxD30 ( nvxIpids.engNorthIpid, this ) { Description = "Eng North Decoder" };
-			_engEastRx = new DmNvxD30 ( nvxIpids.engEastIpid, this ) { Description = "Eng East Decoder" };
-			_engWestRx = new DmNvxD30 ( nvxIpids.engWestIpid, this ) { Description = "Eng West Decoder" };
-			_serviceNorthRx = new DmNvxD30 ( nvxIpids.serviceNorthIpid, this ) { Description = "Service North Decoder" };
-			_serviceWestRx = new DmNvxD30 ( nvxIpids.serviceWestIpid, this ) { Description = "Service West Decoder" };
-
-
-			_nvxTxList.Add ( new DmNvxE30 ( 0x0B, this ) { Description = $"Nvx-Tx-1" } );
-			_nvxTxList.Add ( new DmNvxE30 ( 0x0C, this ) { Description = $"Nvx-Tx-2" } );
-			_nvxTxList.Add ( new DmNvxE30 ( 0x0D, this ) { Description = $"Nvx-Tx-3" } );
-			_nvxTxList.Add ( new DmNvxE30 ( 0x0E, this ) { Description = $"Nvx-Tx-4" } );
-			_nvxTxList.Add ( new DmNvxE30 ( 0x0F, this ) { Description = $"Nvx-Tx-5" } );
-			_nvxTxList.Add ( new DmNvxE30 ( 0x10, this ) { Description = $"Nvx-Tx-6" } );
-			_nvxTxList.Add ( new DmNvxE30 ( 0x11, this ) { Description = $"Nvx-Tx-7" } );
-			_nvxTxList.Add ( new DmNvxE30 ( 0x12, this ) { Description = $"Nvx-Tx-8" } );
-
-			ConfigureNvxDevice ( _lobbyRx );
-			ConfigureNvxDevice ( _engNorthRx );
-			ConfigureNvxDevice ( _engEastRx );
-			ConfigureNvxDevice ( _engWestRx );
-			ConfigureNvxDevice ( _serviceNorthRx );
-			ConfigureNvxDevice ( _serviceWestRx );
-
-			foreach (var tx in _nvxTxList)
-			{
-				ConfigureNvxDevice ( tx );
-			}
-		}
-
 		void LoadUserInterfacesSmartGraphics ( BasicTriListWithSmartObject currentDevice )
 		{
 			try
@@ -216,11 +183,45 @@ namespace TSISignageApp
 		}
 
 
+		void ConfigureNvxDevices ( )
+		{
+
+			_lobbyRx = new DmNvxD30 ( nvxIpids.lobbyIpid, this ) { Description = "Lobby Decoder" };
+			_engNorthRx = new DmNvxD30 ( nvxIpids.engNorthIpid, this ) { Description = "Eng North Decoder" };
+			_engEastRx = new DmNvxD30 ( nvxIpids.engEastIpid, this ) { Description = "Eng East Decoder" };
+			_engWestRx = new DmNvxD30 ( nvxIpids.engWestIpid, this ) { Description = "Eng West Decoder" };
+			_serviceNorthRx = new DmNvxD30 ( nvxIpids.serviceNorthIpid, this ) { Description = "Service North Decoder" };
+			_serviceWestRx = new DmNvxD30 ( nvxIpids.serviceWestIpid, this ) { Description = "Service West Decoder" };
+
+
+			_nvxTxList.Add ( new DmNvxE30 ( 0x0B, this ) { Description = $"Nvx-Tx-1" } );
+			_nvxTxList.Add ( new DmNvxE30 ( 0x0C, this ) { Description = $"Nvx-Tx-2" } );
+			_nvxTxList.Add ( new DmNvxE30 ( 0x0D, this ) { Description = $"Nvx-Tx-3" } );
+			_nvxTxList.Add ( new DmNvxE30 ( 0x0E, this ) { Description = $"Nvx-Tx-4" } );
+			_nvxTxList.Add ( new DmNvxE30 ( 0x0F, this ) { Description = $"Nvx-Tx-5" } );
+			_nvxTxList.Add ( new DmNvxE30 ( 0x10, this ) { Description = $"Nvx-Tx-6" } );
+			_nvxTxList.Add ( new DmNvxE30 ( 0x11, this ) { Description = $"Nvx-Tx-7" } );
+			_nvxTxList.Add ( new DmNvxE30 ( 0x12, this ) { Description = $"Nvx-Tx-8" } );
+
+			ConfigureNvxDevice ( _lobbyRx );
+			ConfigureNvxDevice ( _engNorthRx );
+			ConfigureNvxDevice ( _engEastRx );
+			ConfigureNvxDevice ( _engWestRx );
+			ConfigureNvxDevice ( _serviceNorthRx );
+			ConfigureNvxDevice ( _serviceWestRx );
+
+			foreach (var tx in _nvxTxList)
+			{
+				ConfigureNvxDevice ( tx );
+			}
+		}
 
 		void ConfigureNvxDevice ( DmNvxBaseClass device )
 		{
 			device.Register ( );
 		}
+
+
 
 		public void ConfigureNvxSettings(DmNvxBaseClass nvx)
         {
@@ -306,21 +307,16 @@ namespace TSISignageApp
 		{
 			var nvx = stream.Owner as DmNvxBaseClass;
 			string currentstream = nvx.Control.ServerUrlFeedback.StringValue;
-			//ushort currentXioRoute = nvx.XioRouting.VideoOutFeedback.UShortValue;
 			uint thisDest = nvx.ID;
 			int destIndex = VideoRoutes.destinations.FindIndex(a => a.ipid == thisDest); //find the index within VideoRoutes.destination list
 
-
 			if (Debug.nvxDebug) CrestronConsole.PrintLine ( $"NvxRxStreamChangeEvent\n" );
 			if (Debug.nvxDebug) CrestronConsole.PrintLine ( $"currentStream: {currentstream}\n" );
-			//CrestronConsole.PrintLine ( $"currentXioRoute: {currentXioRoute}\n" );
 			if (Debug.nvxDebug) CrestronConsole.PrintLine ( $"ipid: {thisDest}\n" );
 			if (Debug.nvxDebug) CrestronConsole.PrintLine ( $"Dest Index: {destIndex}\n" );
 
 			//update destination list values
 			VideoRoutes.destinations[destIndex].streamUrl = currentstream;
-			//VideoRoutes.destinations[ destIndex ].currentXioRoute = currentXioRoute; //only use if nvx device is using Xio to route
-
 			UpdateNvxRxInfo ( nvx );
 		}
 
