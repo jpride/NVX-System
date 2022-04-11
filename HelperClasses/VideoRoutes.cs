@@ -13,7 +13,7 @@ namespace TSISignageApp
 		/// </summary>
 		/// 
 
-		public class VideoEndpointObject
+		public abstract class VideoEndpointObject //abstract because this class is only used as a base class
 		{
 			public ushort   index;
 			public string   name;
